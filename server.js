@@ -1,16 +1,27 @@
+const http = require("http");
+const path = require("path");
+const fs = require("fs");
+const fsPromises = require("fs").promises;
 const logEvents = require("./logEvents");
-
 const EventEmitter = require("events");
 
-class MyEmitter extends EventEmitter {}
+class Emitter extends EventEmitter {}
 
 //initialize object
-const myEmitter = new MyEmitter();
+const myEmitter = new Emitter();
+
+const PORT = process.env.PORT || 8000;
+
+const server = http.createServer((req, res) => {
+  console.log(req.url, req.method);
+});
+
+server.listen(PORT, () => {
+  console.log(`server running on port ${PORT}`);
+});
 
 //adda listener for log event
-myEmitter.on("log", (msg) => logEvents(msg));
+// myEmitter.on("log", (msg) => logEvents(msg));
 
-setTimeout(() => {
-  //emit event
-  myEmitter.emit("log", "Log event emitted");
-}, 2000);
+//   //emit event
+//   myEmitter.emit("log", "Log event emitted");
