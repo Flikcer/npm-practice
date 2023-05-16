@@ -1,74 +1,60 @@
-const path = require("path");
 const express = require("express");
 const app = express();
+const path = require("path");
+const cors = require("cors");
+const { logger } = require("./middleware/logEvents");
+const errorHandler = require("./middleware/errorHandler");
+const PORT = process.env.PORT || 3500;
 
-const PORT = process.env.PORT || 8000;
+// custom middleware logger
+app.use(logger);
 
-//path to index upon url req to '/' and '/index.html' () and ? make the html optional
-app.get("^/$|/index(.html)?", (req, res) => {
-  try {
-    //same thing as commented code but this allows for any type of pathing so it doesnt break wehn deploying to certain places or building
-    res.status(200).sendFile(path.join(__dirname, "views", "index.html"));
-    //res.status(200).sendFile("./views/index.html", { root: __dirname });
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-app.get("/new-page(.html)?", (req, res) => {
-  try {
-    res.status(200).sendFile(path.join(__dirname, "views", "new-page.html"));
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-app.get("/old-page(.html)?", (req, res) => {
-  try {
-    //dont have to use status here, will take it in as first param
-    res.redirect(301, "/new-page.html");
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-app.get("/*", (req, res) => {
-  //send to 404 with proper code
-  res.status(404).sendFile(path.join(__dirname, "views", "404.html"));
-});
-
-app.get(
-  "/hello(.html)?",
-  (req, res, next) => {
-    console.log("attempted to load hello");
-    //moves on to next expression
-    next();
+// Cross Origin Resource Sharing
+const whitelist = [
+  "https://www.yoursite.com",
+  "http://127.0.0.1:5500",
+  "http://localhost:3500",
+];
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (whitelist.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
   },
-  (req, res) => {
-    res.send("Hello");
+  optionsSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
+
+// built-in middleware to handle urlencoded data
+// in other words, form data:
+// ‘content-type: application/x-www-form-urlencoded’
+app.use(express.urlencoded({ extended: false }));
+
+// built-in middleware for json
+app.use(express.json());
+
+//serve static files
+app.use("/", express.static(path.join(__dirname, "/public")));
+app.use("/subdir", express.static(path.join(__dirname, "/public")));
+
+// routes
+app.use("/", require("./routes/root"));
+app.use("/subdir", require("./routes/subdir"));
+app.use("/employees", require("./routes/api/employees"));
+
+app.all("*", (req, res) => {
+  res.status(404);
+  if (req.accepts("html")) {
+    res.sendFile(path.join(__dirname, "views", "404.html"));
+  } else if (req.accepts("json")) {
+    res.json({ error: "404 Not Found" });
+  } else {
+    res.type("txt").send("404 Not Found");
   }
-);
-
-// chaining route handlers
-const one = (req, res, next) => {
-  console.log("one");
-  next();
-};
-
-const two = (req, res, next) => {
-  console.log("two");
-  next();
-};
-
-const three = (req, res) => {
-  console.log("three");
-  res.send("Finished!");
-};
-
-app.get("/chain(.html)?", [one, two, three]);
-
-app.get("/*", (req, res) => {
-  res.status(404).sendFile(path.join(__dirname, "views", "404.html"));
 });
+
+app.use(errorHandler);
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
