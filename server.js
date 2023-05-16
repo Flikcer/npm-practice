@@ -37,4 +37,38 @@ app.get("/*", (req, res) => {
   res.status(404).sendFile(path.join(__dirname, "views", "404.html"));
 });
 
+app.get(
+  "/hello(.html)?",
+  (req, res, next) => {
+    console.log("attempted to load hello");
+    //moves on to next expression
+    next();
+  },
+  (req, res) => {
+    res.send("Hello");
+  }
+);
+
+// chaining route handlers
+const one = (req, res, next) => {
+  console.log("one");
+  next();
+};
+
+const two = (req, res, next) => {
+  console.log("two");
+  next();
+};
+
+const three = (req, res) => {
+  console.log("three");
+  res.send("Finished!");
+};
+
+app.get("/chain(.html)?", [one, two, three]);
+
+app.get("/*", (req, res) => {
+  res.status(404).sendFile(path.join(__dirname, "views", "404.html"));
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
